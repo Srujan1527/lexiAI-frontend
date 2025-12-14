@@ -18,11 +18,13 @@ export async function analyzeDocument(
  * Calls backend: POST /api/ai/chat
  */
 export async function sendChatMessage(
+  documentId: string,
   history: { role: "user" | "model"; text: string }[],
   newMessage: string,
   analysisContext?: any
 ): Promise<string> {
   const { data } = await http.post("ai/chat", {
+    documentId,
     message: newMessage,
     history,
     analysisContext,

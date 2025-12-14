@@ -9,6 +9,9 @@ import {
 } from "../components/Icons";
 
 type Props = {
+  isAnalyzing: boolean;
+  onAnalyzeDoc: (docId: string) => void;
+  isUploading: boolean;
   user: User | null;
   documents: StoredDocument[];
   filteredDocuments: StoredDocument[];
@@ -22,6 +25,9 @@ type Props = {
 };
 
 export default function DashboardView({
+  isAnalyzing,
+  onAnalyzeDoc,
+  isUploading,
   user,
   documents,
   filteredDocuments,
@@ -47,8 +53,14 @@ export default function DashboardView({
           <div className="relative overflow-hidden group">
             <button className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg transition-colors shadow-sm">
               <UploadIcon className="w-5 h-5" />
-              <span>New Scan</span>
+              {isUploading ? "Uploading..." : "New Scan"}
             </button>
+            {isUploading && (
+              <div className="mt-3 flex items-center gap-2 text-sm text-slate-600">
+                <div className="h-4 w-4 rounded-full border-2 border-slate-300 border-t-slate-900 animate-spin" />
+                Uploading document, please wait...
+              </div>
+            )}
             <input
               type="file"
               className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
@@ -120,9 +132,9 @@ export default function DashboardView({
             <div
               key={doc.id}
               onClick={() => onOpenDoc(doc)}
-              className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:border-blue-300 transition-all cursor-pointer group"
+              className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:border-blue-300 transition-all cursor-pointer group flex flex-col min-h-[220px]"
             >
-              <div className="flex justify-between items-start mb-3">
+              <div className="flex flex-1 justify-between items-start mb-3">
                 <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
                   <FileIcon className="w-6 h-6" />
                 </div>
@@ -157,6 +169,24 @@ export default function DashboardView({
                   </span>
                 )}
               </div>
+
+              {/* ACTION BUTTON */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onAnalyzeDoc(doc.id);
+                }}
+                disabled={isAnalyzing}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition mt-5
+      ${
+        isAnalyzing
+          ? "bg-slate-200 text-slate-400 cursor-not-allowed"
+          : "bg-blue-600 text-white hover:bg-blue-700"
+      }
+    `}
+              >
+                Analyze
+              </button>
             </div>
           ))}
         </div>

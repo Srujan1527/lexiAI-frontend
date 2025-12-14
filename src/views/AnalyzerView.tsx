@@ -8,6 +8,7 @@ import {
 import AnalysisContent from "../components/analyzer/AnalysisContent";
 
 type Props = {
+  isUploading: boolean;
   isAnalyzing: boolean;
   isHistoryView: boolean;
   currentFile: UploadedFile | null;
@@ -65,9 +66,15 @@ export default function AnalyzerView(props: Props) {
       )}
 
       {/* ✅ If analyzing, show a simple status */}
-      {props.isAnalyzing && (
-        <div className="mb-6 bg-blue-50 border border-blue-100 text-blue-800 px-4 py-3 rounded-lg text-sm">
-          Analyzing document… please wait.
+      {props.isUploading && (
+        <div className="border rounded-lg p-4 bg-white">
+          <div className="flex items-center gap-3">
+            <div className="h-5 w-5 rounded-full border-2 border-slate-300 border-t-slate-900 animate-spin" />
+            <div>
+              <p className="font-medium">Uploading document…</p>
+              <p className="text-sm text-slate-500">Please wait</p>
+            </div>
+          </div>
         </div>
       )}
 

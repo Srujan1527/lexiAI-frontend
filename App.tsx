@@ -22,18 +22,6 @@ import DashboardView from "./src/views/DashboardView";
 import ProfileView from "./src/views/ProfileView";
 import AnalyzerView from "./src/views/AnalyzerView";
 
-const getGoogleClientId = () => {
-  try {
-    // note: Vite uses import.meta.env, but keeping your fallback logic as-is
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const p: any = (globalThis as any)?.process;
-    if (p?.env?.GOOGLE_CLIENT_ID) return p.env.GOOGLE_CLIENT_ID;
-  } catch {}
-  return "";
-};
-
-const GOOGLE_CLIENT_ID = getGoogleClientId();
-
 export default function App() {
   // --- Auth State ---
   const [user, setUser] = useState<User | null>(null);
@@ -67,11 +55,13 @@ export default function App() {
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState("");
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   // --- Profile State ---
   const [profileForm, setProfileForm] = useState<Partial<User>>({});
   const debugState = {
     // Core State
+    isUploading,
     currentFile,
     analysis,
     activeTab,
@@ -118,6 +108,7 @@ export default function App() {
   useEffect(() => {
     console.log("🔍 DEBUG STATE:", debugState);
   }, [
+    isUploading,
     currentFile,
     analysis,
     activeTab,
@@ -219,6 +210,7 @@ export default function App() {
     }
 
     try {
+      setIsUploading(true);
       setIsAnalyzing(true); // use it as "uploading" spinner too
       setAnalysis(null);
       setChatHistory([]);
@@ -246,12 +238,51 @@ export default function App() {
       console.error(err);
       alert("Upload failed. Please try again.");
     } finally {
+      setIsUploading(false);
       setIsAnalyzing(false);
       // reset input so same file can be uploaded again
       event.target.value = "";
     }
   };
+  const handleAnalyzeFromDashboard = async (docId: string) => {
+    try {
+      setIsAnalyzing(true);
+      setCurrentDocId(docId);
+      setCurrentView(AppView.ANALYZER);
+      setActiveTab(AnalysisTab.SUMMARY);
+      setIsHistoryView(true); // since we are opening existing doc
 
+      // fetch doc details (optional but good for filename/mimetype)
+      // const doc = await storageService.getDocument(docId);
+      setCurrentFile({
+        name: "Document",
+        type: "application/pdf",
+        data: "",
+      });
+
+      // call backend analyze
+      const result = await analyzeDocument(docId);
+      setAnalysis(result);
+
+      storageService.saveAnalysis(docId, result);
+
+      setChatHistory([
+        {
+          id: "init-1",
+          role: "model",
+          text: `I've analyzed **${"your document"}**. Ask me anything about it.`,
+          timestamp: new Date(),
+        },
+      ]);
+    } catch (err: any) {
+      console.error(err);
+      alert(err?.response?.data?.message || "Analysis failed. Try again.");
+      // go back to dashboard if analysis failed
+      setCurrentView(AppView.DASHBOARD);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
   //analyze when button is clicked
   const handleAnalyzeClick = async () => {
     if (!currentDocId) {
@@ -328,6 +359,7 @@ export default function App() {
       const analysisContext = analysis ? JSON.stringify(analysis) : undefined;
 
       const responseText = await sendChatMessage(
+        currentDocId,
         apiHistory,
         userMsg.text,
         analysisContext
@@ -423,6 +455,7 @@ export default function App() {
             <div className="max-w-5xl mx-auto w-full">
               {currentView === AppView.DASHBOARD && (
                 <DashboardView
+                  isUploading={isUploading}
                   user={user}
                   documents={documents}
                   filteredDocuments={filteredDocuments}
@@ -433,6 +466,8 @@ export default function App() {
                   onFileUpload={handleFileUpload}
                   onOpenDoc={openHistoryDocument}
                   onDeleteDoc={handleDeleteDocument}
+                  isAnalyzing={isAnalyzing}
+                  onAnalyzeDoc={handleAnalyzeFromDashboard}
                 />
               )}
 
@@ -447,6 +482,7 @@ export default function App() {
 
               {currentView === AppView.ANALYZER && (
                 <AnalyzerView
+                  isUploading={isUploading}
                   isAnalyzing={isAnalyzing}
                   isHistoryView={isHistoryView}
                   currentFile={currentFile}
